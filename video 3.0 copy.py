@@ -78,7 +78,7 @@ def open_file():
     file_path = filedialog.askopenfilename(filetypes=[("Video Files", "*.mp4 *.avi *.mkv *.mp3")])
     media = instance.media_new(file_path)
     player.set_media(media)
-    '''
+    
     # Obtener la ruta relativa del archivo
     ruta_relativa = os.path.join(os.getcwd(), file_path)
     print(ruta_relativa)
@@ -97,7 +97,7 @@ def open_file():
     write_str = WriteSRT(srt_path)
     with open(srt_path, "w", encoding="utf-8") as srt_file:
         write_str.write_result(result, srt_file, options={'max_line_width': 250, 'max_line_count': 250, 'highlight_words': True})
-    '''
+    
     player.play()
 
 # Función para pausar el video
