@@ -12,6 +12,9 @@ import whisper
 import pandas as pd
 import os
 from whisper.utils import WriteSRT
+from moviepy.editor import VideoFileClip, ImageClip
+from tkinter import messagebox, simpledialog
+
 # crear la instancia de VLC
 instance = vlc.Instance('--no-xlib')
 player = instance.media_player_new()
@@ -101,6 +104,56 @@ def cerrar_ventana():
 def MosSub():
     subtitles = vlc.Media('Sub.srt')
     media.add_option('sub-file={}'.format(subtitles.get_mrl()))
+
+def insert_frame():
+    # Seleccionar el video original
+    root = Tk()
+    root.withdraw()
+    original_video_path = filedialog.askopenfilename(title="Seleccionar video original",
+                                                     filetypes=(("Archivos de video", "*.mp4 *.avi *.mov"), ("Todos los archivos", "*.*")))
+    if not original_video_path:
+        messagebox.showerror("Error", "Debe seleccionar un video original.")
+        return
+    video = VideoFileClip(original_video_path)
+
+    # Extraer el audio y los frames
+    audio = video.audio
+    frames = []
+    for i, frame in enumerate(video.iter_frames()):
+        frames.append(frame)
+
+    # Seleccionar el frame editado
+    edited_frame_path = filedialog.askopenfilename(title="Seleccionar frame editado",
+                                                   filetypes=(("Archivos de imagen", "*.jpg *.png *.bmp"), ("Todos los archivos", "*.*")))
+    if not edited_frame_path:
+        messagebox.showerror("Error", "Debe seleccionar un frame editado.")
+        return
+    edited_frame = ImageClip(edited_frame_path)
+
+    # Seleccionar el marco donde se insertará el frame editado
+    total_frames = len(frames)
+    frame_to_replace = simpledialog.askinteger("Seleccionar marco",
+                                               f"El video tiene un total de {total_frames} marcos. ¿En qué marco desea insertar el frame editado?",
+                                               minvalue=1,
+                                               maxvalue=total_frames)
+    if not frame_to_replace or frame_to_replace < 1 or frame_to_replace > total_frames:
+        messagebox.showerror("Error", "Debe seleccionar un marco válido.")
+        return
+    index_to_replace = frame_to_replace - 1
+
+    # Insertar el frame editado en el marco seleccionado
+    for i in range(30):
+        frames[index_to_replace +
+               i] = edited_frame.to_RGB().resize((video.w, video.h)).img
+
+    # Generar el nuevo video
+    new_video_path = os.path.splitext(original_video_path)[0] + "_edited2.mp4"
+    new_video = ImageSequenceClip(frames, fps=video.fps)
+    new_video = new_video.set_audio(audio)
+    new_video.write_videofile(new_video_path, codec="libx264")
+    messagebox.showinfo(
+        "Éxito", f"El video editado se ha guardado en {new_video_path}.")
+
 # crear la root principal de tkinterdis
 root = tk.Tk()
 root.title("Reproductor de Video")
@@ -129,6 +182,8 @@ ToolTip(parada,msg="detiene la reproduccion del video ")
 imaframe=ttk.Button(root,text="extraer frame",command=extract_frame)
 imaframe.place(x=100,y=520)
 ToolTip(imaframe,msg="extra el frame que se esta viendo en imagen ")
+NewVideo=ttk.Button(root,text="nuevo video",command=insert_frame)
+NewVideo.place(x=200,y=475)
 load = False
 playing = True
 currentTimeLabel = ttk.Label(root, text='00:00')
