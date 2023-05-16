@@ -1,7 +1,7 @@
 import vlc
 from tkinter import *
 import tkinter as tk
-from tkinter import filedialog, ttk
+from tkinter import filedialog, ttk, messagebox, simpledialog
 import time
 import cv2
 from PIL import Image, ImageTk
@@ -12,8 +12,11 @@ import whisper
 import pandas as pd
 import os
 from whisper.utils import WriteSRT
-#from moviepy.editor import VideoFileClip, ImageClip
-from tkinter import messagebox, simpledialog
+from moviepy.video.io.VideoFileClip import VideoFileClip
+from moviepy.video.VideoClip import ImageClip
+from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
+from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
+from imageio.core.util import Image
 
 # crear la instancia de VLC
 instance = vlc.Instance('--no-xlib')
@@ -24,7 +27,7 @@ def extract_frame():
     # Pausa el reproductor de video
     player.pause()
     # Obtiene el tiempo actual del video
-    frame_time = (player.get_time() / 1000.0) + 0.01
+    frame_time = int((player.get_time() / 1000.0) + 0.01)
     # Carga el video en OpenCV
     cap = cv2.VideoCapture(player.get_media().get_mrl())
     # Va al fotograma especificado por el tiempo actual del video
@@ -64,6 +67,7 @@ def extract_frame():
         img_label.pack()
     else:
         print("No se seleccionó ningún archivo para guardar el fotograma.")
+    print(frame_time)
 # Función para abrir un archivo de video
 def open_file():
     file_path = filedialog.askopenfilename(filetypes=[("Video Files", "*.mp4 *.avi *.mkv *.mp3")])
@@ -105,6 +109,57 @@ def MosSub():
     subtitles = vlc.Media('Sub.srt')
     media.add_option('sub-file={}'.format(subtitles.get_mrl()))
 
+    # Seleccionar el video original
+    root = Tk()
+    root.withdraw()
+    original_video_path = filedialog.askopenfilename(title="Seleccionar video original",
+                                                     filetypes=(("Archivos de video", "*.mp4 *.avi *.mov"), ("Todos los archivos", "*.*")))
+    if not original_video_path:
+        messagebox.showerror("Error", "Debe seleccionar un video original.")
+        return
+    video = VideoFileClip(original_video_path)
+
+    # Extraer el audio y los frames
+    audio = video.audio
+    frames = []
+    for i, frame in enumerate(video.iter_frames()):
+        frames.append(frame)
+
+    # Seleccionar el frame editado
+    edited_frame_path = filedialog.askopenfilename(title="Seleccionar frame editado",
+                                                   filetypes=(("Archivos de imagen", "*.jpg *.png *.bmp"), ("Todos los archivos", "*.*")))
+    if not edited_frame_path:
+        messagebox.showerror("Error", "Debe seleccionar un frame editado.")
+        return
+    edited_frame = ImageClip(edited_frame_path)
+
+    # Seleccionar el marco donde se insertará el frame editado
+    total_frames = len(frames)
+    frame_to_replace = simpledialog.askinteger("Seleccionar marco",
+                                               f"El video tiene un total de {total_frames} marcos. ¿En qué marco desea insertar el frame editado?",
+                                               minvalue=1,
+                                               maxvalue=total_frames)
+    if not frame_to_replace or frame_to_replace < 1 or frame_to_replace > total_frames:
+        messagebox.showerror("Error", "Debe seleccionar un marco válido.")
+        return
+    index_to_replace = frame_to_replace - 1
+
+    # Insertar el frame editado en el marco seleccionado
+    for i in range(30):
+        edited_frame = edited_frame.resize((video.w, video.h))
+        edited_frame = edited_frame.set_duration(1/video.fps)  # Duración de 1 fotograma
+        edited_frame = edited_frame.set_start((index_to_replace + i) / video.fps)  # Tiempo de inicio del fotograma
+        frames.insert(index_to_replace + i, edited_frame)
+
+    # Generar el nuevo video
+    new_video_path = os.path.splitext(original_video_path)[0] + "_edited2.mp4"
+    new_video = ImageSequenceClip(frames, fps=video.fps)
+    new_video = new_video.set_audio(audio)
+    new_video.write_videofile(new_video_path, codec="libx264")
+    messagebox.showinfo(
+        "Éxito", f"El video editado se ha guardado en {new_video_path}.")
+
+
 def insert_frame():
     # Seleccionar el video original
     root = Tk()
@@ -144,7 +199,7 @@ def insert_frame():
     # Insertar el frame editado en el marco seleccionado
     for i in range(30):
         frames[index_to_replace +
-               i] = edited_frame.to_RGB().resize((video.w, video.h)).img
+               i] = edited_frame.set_position((0, 0)).resize((video.w, video.h)).img
 
     # Generar el nuevo video
     new_video_path = os.path.splitext(original_video_path)[0] + "_edited2.mp4"
@@ -153,6 +208,7 @@ def insert_frame():
     new_video.write_videofile(new_video_path, codec="libx264")
     messagebox.showinfo(
         "Éxito", f"El video editado se ha guardado en {new_video_path}.")
+
 
 # crear la root principal de tkinterdis
 root = tk.Tk()
@@ -182,8 +238,8 @@ ToolTip(parada,msg="detiene la reproduccion del video ")
 imaframe=ttk.Button(root,text="extraer frame",command=extract_frame)
 imaframe.place(x=100,y=520)
 ToolTip(imaframe,msg="extra el frame que se esta viendo en imagen ")
-#NewVideo=ttk.Button(root,text="nuevo video",command=insert_frame)
-#NewVideo.place(x=200,y=475)
+NewVideo=ttk.Button(root,text="nuevo video",command=insert_frame)
+NewVideo.place(x=200,y=475)
 load = False
 playing = True
 currentTimeLabel = ttk.Label(root, text='00:00')
