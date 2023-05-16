@@ -17,12 +17,15 @@ from moviepy.video.VideoClip import ImageClip
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 from imageio.core.util import Image
+import PIL
 
 # crear la instancia de VLC
 instance = vlc.Instance('--no-xlib')
 player = instance.media_player_new()
 player.set_fullscreen(True)
 # Función para extraer un frame del video
+
+
 def extract_frame():
     # Pausa el reproductor de video
     player.pause()
@@ -32,6 +35,7 @@ def extract_frame():
     cap = cv2.VideoCapture(player.get_media().get_mrl())
     # Va al fotograma especificado por el tiempo actual del video
     cap.set(cv2.CAP_PROP_POS_MSEC, (frame_time * 1000))
+    print(cv2.CAP_PROP_POS_MSEC, (frame_time * 1000))
     # Lee el fotograma actual
     ret, frame = cap.read()
     # Si no se pudo leer el fotograma, sale de la función
@@ -40,7 +44,7 @@ def extract_frame():
     # Libera los recursos del objeto VideoCapture
     cap.release()
     # Agrega una línea al fotograma
-    img = cv2.circle(frame, (377,253), 63, (0, 0, 255), -1)
+    img = cv2.circle(frame, (377, 253), 63, (0, 0, 255), -1)
     # Pide al usuario que seleccione un archivo para guardar el fotograma
     file_path = filedialog.asksaveasfilename(defaultextension=".jpg")
     # escribir fotograma modificado en el video
@@ -58,16 +62,16 @@ def extract_frame():
         # Guarda el fotograma en el archivo seleccionado
         cv2.imwrite(file_path, img)
         # Carga la imagen en un objeto Image de Pillow
-        img = Image.open(file_path) 
+        img = PIL.Image.open(file_path)
         # Convierte la imagen a un objeto PhotoImage de Tkinter
-        img_tk = ImageTk.PhotoImage(img)
+        img_tk = PIL.ImageTk.PhotoImage(img)
         # Crea una etiqueta para mostrar la imagen en una ventana aparte
-        img_label = Label(Toplevel(), image=img_tk)
+        img_label = tk.Label(tk.Toplevel(), image=img_tk)
         img_label.image = img_tk
         img_label.pack()
     else:
         print("No se seleccionó ningún archivo para guardar el fotograma.")
-    print(frame_time)
+
 # Función para abrir un archivo de video
 def open_file():
     file_path = filedialog.askopenfilename(filetypes=[("Video Files", "*.mp4 *.avi *.mkv *.mp3")])
@@ -199,7 +203,7 @@ def insert_frame():
     # Insertar el frame editado en el marco seleccionado
     for i in range(30):
         frames[index_to_replace +
-               i] = edited_frame.set_position((0, 0)).resize((video.w, video.h)).img
+               i] = edited_frame.set_position((0, 0)).img
 
     # Generar el nuevo video
     new_video_path = os.path.splitext(original_video_path)[0] + "_edited2.mp4"
