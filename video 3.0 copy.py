@@ -243,7 +243,7 @@ imaframe=ttk.Button(root,text="extraer frame",command=extract_frame)
 imaframe.place(x=100,y=520)
 ToolTip(imaframe,msg="extra el frame que se esta viendo en imagen ")
 NewVideo=ttk.Button(root,text="nuevo video",command=insert_frame)
-NewVideo.place(x=200,y=475)
+NewVideo.place(x=600,y=475)
 load = False
 playing = True
 currentTimeLabel = ttk.Label(root, text='00:00')
